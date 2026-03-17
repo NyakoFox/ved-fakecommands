@@ -169,17 +169,9 @@ end
 		},
 		{
 			find = [[
-	else
-		internalscript = false
-		cutscenebarsinternalscript = false
-	end
+	return readable_script
 ]],
 			replace = [[
-	else
-		internalscript = false
-		cutscenebarsinternalscript = false
-	end
-
 	for i = #readable_script, 1, -1 do
 		local line = readable_script[i]
 
@@ -199,8 +191,7 @@ end
 			readable_script[i] = line:sub(10)
 		end
 	end
-	--input = scriptlines[editingline]
-	--input_r = ""
+	return readable_script
 ]],
 			ignore_error = false,
 			luapattern = false,
@@ -286,6 +277,8 @@ end
 	},
 	["loadconfig"] =
 	{
+
+        -- VED 1.12.2
 		{
 			find = [[
 	syntaxcolor_comment = {
@@ -297,7 +290,25 @@ end
 	},
 	syntaxcolor_comment = {
 ]],
-			ignore_error = false,
+			ignore_error = true,
+			luapattern = false,
+			allowmultiple = false,
+		},
+
+        -- VED 2.0
+		{
+			find = [[
+		key = "syntaxcolor_comment",
+]],
+			replace = [[
+		key = "syntaxcolor_fakecommand",
+		default = {134, 255, 175},
+		["type"] = "rgb",
+	},
+	{
+		key = "syntaxcolor_comment",
+]],
+			ignore_error = true,
 			luapattern = false,
 			allowmultiple = false,
 		}
