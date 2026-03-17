@@ -1,36 +1,37 @@
 # ved-fakecommands
 
-fake commands for ved
+Adds "fake commands", or "fakecommands", which turn into normal commands behind the scenes!
+Save some typing, or code-generate entire cutscenes based on your input!
 
-Run ved with the plugin once to create `fakecommands.lua` in your ved folder in appdata
+## Download?
 
-edit the file to add fake commands
+Download this repository as a ZIP, and put the folder containing the files into your Ved plugins directory.
 
-## NEW - FAKECOMMAND EVENTS
+## How do I use them?
 
-Since 1.2.6, there are now "events". They are executed when certain sections of code are reached.
-
-The events you can use are:
-
-- `preparse` - Happens before the script is parsed for fakecommands.
-- `postparse` - Happens after the script is parsed for fakecommands.
-
-### Event example
+Using fakecommands are easy, just write a colon, the command name, and any arguments if the command wants them!
 
 ```lua
-register_event("preparse",function()
-    print("This is printed before the script is parsed.")
-end)
+cutscene
+untilbars
+
+:reply()
+Hi! I'm Viridian!
+
+endcutscene
+untilbars
 ```
 
-## NEW - PER LEVEL FAKECOMMANDS
+Putting this in an internal script should create Viridian's textbox.
 
-Since 1.2.4, you can now place a `fakecommands.lua` file in your level assets folder.
+## How do I add my own?
 
-## Fake command example
+Add a file named `fakecommands.lua` in your level's folder.
+
+Fake commands are written in Lua. You register a command by name, and give it a function.
 
 ```lua
-register_cmd("flash",function(args)
+register_cmd("flash", function(args)
     return {
         "flash(5)",
         "shake(20)",
@@ -39,50 +40,137 @@ register_cmd("flash",function(args)
 end)
 ```
 
-Usage is just writing `:flash()` in your script. This is a "recreation" of the simplified scripting `flash` command.
+This is a sample command which creates the simplified scripting `flash` command.
 
-## Options example
+### Arguments
 
-Fakecommands can also have various options, passed as a third argument. Currently, there are `consumetext` and `color`.
+Arguments are user-input, so make sure you properly handle them! The `args` table passed into the function contains them.
+
+For example, a `:flash()` with a custom sound argument:
 
 ```lua
-register_cmd("setroomname",function(args,consumed)
-    -- consumed is the lines of text. Let's only capture the first line.
+register_cmd("flash", function(args)
+    local commands = {
+        "flash(5)",
+        "shake(20)"
+    }
+
+    if args[1] ~= nil then
+        -- If we got a first argument, use it!
+        table.insert(commands, "playef(" .. args[1] .. ")")
+    else
+        -- We didn't get an argument. Use the default!
+        table.insert(commands, "playef(9)")
+    end
+
+    return commands
+end)
+```
+
+### Basic Options
+
+Fake commands can have various options, passed in as a third argument to the `register_cmd` function. There is `consumetext` and `color`.
+
+```lua
+register_cmd("setroomname",function(args, consumed)
+    -- `consumed` is a table, containing the consumed lines of text.
     return {
         "setroomname",
-        consumed[1] or ""
+        consumed[1] or "" -- Use the line we captured! If it's nil (there's no next line), use an empty string instead.
     }
 end, {
-    consumetext = 1,
-    color = "white"
+    consumetext = 1, -- Capture one line below the command
+    color = "white" -- Highlight it as white
 })
 ```
 
-Both `consumetext` and `color` get arguments from the fakecommand itself. If you want to have a variable amount of consumed text, you can do something along the lines of:
+This example command is just `setroomname`, but it shows off that it should consume a single line below it, and highlight that line as white.
+
+### Dynamic Options
+
+Options can also be functions, which receive any arguments that the command itself receives.
 
 ```lua
-register_cmd("reply",function(args,consumed)
+register_cmd("reply", function(args,consumed)
     -- consumed is the lines of text
     local scr = {}
-    table.insert(scr,"squeak(cyan)")
-    table.insert(scr,"text(player,0,0," .. #consumed .. ")")
-    for i = 1, #consumed do
-        table.insert(scr,consumed[i])
+    table.insert(scr, "squeak(cyan)")
+    table.insert(scr, "text(player,0,0," .. #consumed .. ")")
+    for i = 1, #consumed do -- Loop through the lines we got.
+        table.insert(scr, consumed[i]) -- Insert the line into the script.
     end
-    table.insert(scr,"position(center)")
-    table.insert(scr,"speak_active")
-    table.insert(scr,"endtext")
+    table.insert(scr, "position(center)")
+    table.insert(scr, "speak_active")
+    table.insert(scr, "endtext")
     return scr
 end, {
     consumetext = function(args)
-        return math.max(anythingbutnil0(args[1]),1)
+        -- FIRST: Grab the line count the player input in our command
+        local lines_to_consume = anythingbutnil0(args[1])
+        -- anythingbutnil0 is a helper function which turns any `nil`s (the absence of a value, like if someone didn't pass in the argument) into 0s.
+
+        -- SECOND: Make sure you can't have less than one line...
+        if lines_to_consume < 1 then
+            lines_to_consume = 1
+        end
+
+        return lines_to_consume -- Tell fakecommands that we want to consume the amount of lines the user input, with a minimum of one line!
     end,
     color = "player"
 })
 ```
 
-> [!NOTE]
-> This is a very cut down version of the `:reply` fakecommand. Check `fakecommands_defaults.lua` for the real version if required.
+Tada! Now, `:reply(20)` will take up the next 20 lines, and shove them into our fakecommand! With this, you can make things like custom textboxes!
+
+> [!WARNING]
+> This is a very cut down version of the `:reply` fakecommand, solely as an example. Check `fakecommands_defaults.lua` for the real version if required.
+
+### Events
+
+Events are special functions which are executed when certain sections of code are reached.
+
+The events you can use are:
+
+- `preparse` - Happens before the script is parsed for Fake commands, when a script is saved.
+- `postparse` - Happens after the script is parsed for Fake commands, when a script is saved.
+
+### Event example
+
+```lua
+local my_counter = 0
+
+register_event("preparse", function()
+    my_counter = 0 -- Reset the counter when we're about to read the script.
+end)
+
+register_cmd("inccounter", function(args)
+    my_counter = my_counter + 1
+    return {} -- Don't insert any lines!
+end)
+
+register_event("postparse", function()
+    print("Amount of times :inccounter appeared in the script: " .. my_counter)
+end)
+
+```
+
+With these, saving the following script in Ved:
+
+```lua
+:inccounter()
+:inccounter()
+:inccounter()
+:inccounter()
+:inccounter()
+```
+
+...should print out the following text in the console:
+
+```
+Amount of times :inccoutner appeared in the script: 5
+```
+
+Any time your command may rely on variables which persist between commands, make sure to reset them in `preparse`, or else they'll end up affecting other scripts you open!
 
 ## Defaults
 
@@ -168,7 +256,7 @@ two lines. It appears below him.
 ```
 
 > [!NOTE]
-> This may work differently than you may expect if you're coming from simplified scripting as this is not a 1-1 recreation of it.
+> This may work differently than you may expect if you're coming from simplified scripting as this is not a 1:1 recreation of it.
 
 ### `:reply([lines, [position]])`
 
@@ -181,4 +269,4 @@ Display a player textbox with the given lines.
 - - `center` (center of the screen)
 
 > [!NOTE]
-> This may work differently than you may expect if you're coming from simplified scripting as this is not a 1-1 recreation of it.
+> This may work differently than you may expect if you're coming from simplified scripting as this is not a 1:1 recreation of it.
