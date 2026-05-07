@@ -1,11 +1,9 @@
-
-function register_cmd(name,func,options)
-
-	for i = #FAKECOMMANDS, 1, -1 do
-		if FAKECOMMANDS[i]["name"] == name then
-			table.remove(FAKECOMMANDS, i)
-		end
-	end
+function register_cmd(name, func, options)
+    for i = #FAKECOMMANDS, 1, -1 do
+        if FAKECOMMANDS[i]["name"] == name then
+            table.remove(FAKECOMMANDS, i)
+        end
+    end
 
     local cmd = {
         name = name,
@@ -14,21 +12,21 @@ function register_cmd(name,func,options)
             consumetext = 0
         }
     }
-    table.insert(FAKECOMMANDS,cmd)
+    table.insert(FAKECOMMANDS, cmd)
 end
 
 function register_event(event,func)
     if FAKECOMMANDS_EVENTS[event] == nil then
         FAKECOMMANDS_EVENTS[event] = {}
     end
-    table.insert(FAKECOMMANDS_EVENTS[event],func)
+    table.insert(FAKECOMMANDS_EVENTS[event], func)
 end
 
 function FAKECOMMANDS_event(event_name, ...)
     if FAKECOMMANDS_EVENTS[event_name] == nil then
         return
     end
-    for _,func in ipairs(FAKECOMMANDS_EVENTS[event_name]) do
+    for _, func in ipairs(FAKECOMMANDS_EVENTS[event_name]) do
         local success, result = pcall(func, ...)
         if not success then
             FAKECOMMANDS_error(event_name, "event", nil, result)
@@ -69,7 +67,7 @@ function FAKECOMMANDS_error(command, where, line, error_msg)
     cons(str)
 end
 
-function FAKECOMMANDS_load_safe(path)
+function FAKECOMMANDS_DOFILE_SAFE(path)
     local success, result = pcall(dofile, path)
     return success, result
 end
@@ -84,7 +82,7 @@ function FAKECOMMANDS_load(levelassetsfolder)
 
     dofile(love.filesystem.getSaveDirectory() .. "/" .. fakecommands_path .. "fakecommands_defaults.lua")
 
-    local success, result = FAKECOMMANDS_load_safe(love.filesystem.getSaveDirectory() .. "/fakecommands.lua")
+    local success, result = FAKECOMMANDS_DOFILE_SAFE(love.filesystem.getSaveDirectory() .. "/fakecommands.lua")
     if success then
         cons("Loaded user fakecommands")
     else
@@ -92,13 +90,13 @@ function FAKECOMMANDS_load(levelassetsfolder)
         cons(result)
     end
 
-	if levelassetsfolder ~= nil then
-		local success, result = FAKECOMMANDS_load_safe(levelassetsfolder .. "/fakecommands.lua")
-		if success then
-			cons("Loaded level-specific fakecommands")
-		else
-			cons("Error loading level-specific fakecommands")
-			cons(result)
-		end
-	end
+    if levelassetsfolder ~= nil then
+        local success, result = FAKECOMMANDS_DOFILE_SAFE(levelassetsfolder .. "/fakecommands.lua")
+        if success then
+            cons("Loaded level-specific fakecommands")
+        else
+            cons("Error loading level-specific fakecommands")
+            cons(result)
+        end
+    end
 end
