@@ -67,6 +67,17 @@ function FAKECOMMANDS_error(command, where, line, error_msg)
     cons(str)
 end
 
+function FAKECOMMANDS_EXECUTE_SAFE(path)
+    local chunk, err = love.filesystem.load(path)
+
+    if chunk then
+        local success, result = pcall(chunk)
+        return success, result
+    end
+
+    return false, err
+end
+
 function FAKECOMMANDS_DOFILE_SAFE(path)
     local success, result = pcall(dofile, path)
     return success, result
@@ -80,9 +91,15 @@ function FAKECOMMANDS_load(levelassetsfolder)
         local success, message = love.filesystem.write("fakecommands.lua", "-- See fakecommands_defaults.lua in the plugin directory for examples.\n-- Make sure to check arguments for nil!\n-- Per-level fakecommands can also be made now, create fakecommands.lua in your level's assets folder")
     end
 
-    dofile(love.filesystem.getSaveDirectory() .. "/" .. fakecommands_path .. "fakecommands_defaults.lua")
+    local success, result = FAKECOMMANDS_EXECUTE_SAFE(fakecommands_path .. "fakecommands_defaults.lua")
+    if success then
+        cons("Loaded default fakecommands")
+    else
+        cons("Error loading default fakecommands")
+        cons(result)
+    end
 
-    local success, result = FAKECOMMANDS_DOFILE_SAFE(love.filesystem.getSaveDirectory() .. "/fakecommands.lua")
+    success, result = FAKECOMMANDS_EXECUTE_SAFE("fakecommands.lua")
     if success then
         cons("Loaded user fakecommands")
     else
@@ -91,7 +108,7 @@ function FAKECOMMANDS_load(levelassetsfolder)
     end
 
     if levelassetsfolder ~= nil then
-        local success, result = FAKECOMMANDS_DOFILE_SAFE(levelassetsfolder .. "/fakecommands.lua")
+        success, result = FAKECOMMANDS_DOFILE_SAFE(levelassetsfolder .. "/fakecommands.lua")
         if success then
             cons("Loaded level-specific fakecommands")
         else
